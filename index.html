@@ -67,7 +67,6 @@
             box-shadow: 0 10px 25px -5px rgba(227, 30, 36, 0.4);
         }
 
-        /* منع القفز العنيف وإعطاء نعومة للتنقل */
         html { scroll-behavior: smooth; }
         section { scroll-margin-top: 100px; }
 
@@ -75,7 +74,6 @@
             transition: opacity 1.5s ease-in-out;
         }
 
-        /* Loading Screen Styles */
         .loader-container {
             position: fixed;
             inset: 0;
@@ -103,7 +101,6 @@
 </head>
 <body class="text-darkBg">
     
-    <!-- Pre-loader to avoid React White Flash -->
     <div id="initial-loader">
         <div class="loader-container">
             <div class="text-brandYellow text-6xl mb-6 animate-bounce-subtle"><i class="fa-solid fa-utensils"></i></div>
@@ -140,7 +137,7 @@
                 aiPlaceholder: 'مثال: بدي وجبة لشخصين بحدود 100 ألف وتكون دجاج...',
                 aiBtn: 'اقتراح سحري ✨',
                 aiThinking: 'جاري التحضير السحري...',
-                aiVpn: 'تنويه: لضمان عمل الذكاء الاصطناعي، يرجى تشغيل VPN 🌐',
+                aiVpn: 'تنويه: المساعد الذكي يعمل الآن بأمان عبر خوادمنا الخاصة.',
                 menuTitle: 'قائمة الطعام',
                 loadMore: 'عرض المزيد',
                 all: 'الكل',
@@ -180,7 +177,7 @@
                 aiPlaceholder: 'e.g., I want a meal for two people under 100k, chicken-based...',
                 aiBtn: 'Magic Suggestion ✨',
                 aiThinking: 'Brewing magic...',
-                aiVpn: 'Note: Please use a VPN for the AI features to work correctly 🌐',
+                aiVpn: 'Note: The AI Assistant now runs securely through our dedicated servers.',
                 menuTitle: 'Our Menu',
                 loadMore: 'Load More',
                 all: 'All',
@@ -245,7 +242,6 @@
             const [showLeftArrow, setShowLeftArrow] = useState(false);
             const [showRightArrow, setShowRightArrow] = useState(true);
 
-            // AI State + Security Cooldown
             const [aiInput, setAiInput] = useState('');
             const [aiResponse, setAiResponse] = useState('');
             const [aiError, setAiError] = useState('');
@@ -357,6 +353,7 @@
                 return `https://wa.me/${phoneNumber}?text=${encodeURIComponent(message)}`;
             };
 
+            // التعديل تم هنا: تم توجيه الطلب إلى Netlify Function
             const generateAIRecommendation = async () => {
                 if (!aiInput.trim() || aiCooldown > 0) return;
                 
@@ -364,36 +361,8 @@
                 setAiResponse('');
                 setAiError('');
 
-                // المهندس موفق: قم بوضع مفتاح الـ API الخاص بك هنا
-                const apiKey = ""; 
-
-                if (!apiKey) {
-                    setAiError(lang === 'ar' ? "يرجى إضافة مفتاح الـ API داخل الكود ليعمل المساعد." : "Please add your API key to the code.");
-                    setIsAiLoading(false);
-                    return;
-                }
-                
                 try {
-                    // 1. تحديد الموديل الأحدث تلقائياً
-                    let modelName = "gemini-1.5-flash"; 
-                    try {
-                        const modelsRes = await fetch(`https://generativelanguage.googleapis.com/v1beta/models?key=${apiKey}`);
-                        if (modelsRes.ok) {
-                            const modelsData = await modelsRes.json();
-                            if (modelsData.models) {
-                                const availableModels = modelsData.models.filter(m => m.supportedGenerationMethods?.includes("generateContent"));
-                                const flashModel = availableModels.find(m => m.name.includes("gemini-1.5-flash")) || availableModels.find(m => m.name.includes("flash")) || availableModels[0];
-                                if (flashModel) {
-                                    modelName = flashModel.name.replace('models/', '');
-                                }
-                            }
-                        }
-                    } catch (e) { 
-                        console.warn("Failed to fetch model list, using default fallback.", e); 
-                    }
-
-                    // 2. معالجة الإرسال للموديل المختار
-                    const endpoint = `https://generativelanguage.googleapis.com/v1beta/models/${modelName}:generateContent?key=${apiKey}`;
+                    const endpoint = '/.netlify/functions/gemini';
                     const menuList = menuItems.map(i => `${i[lang]}: ${i.price} SYP`).join(', ');
                     
                     const systemPrompt = lang === 'ar' 
@@ -405,8 +374,8 @@
                            Crucial: Use double asterisks ** ** to bold meal names, use dashes (-) for bullet points. Do not invent items.`;
 
                     const payload = {
-                        contents: [{ parts: [{ text: aiInput }] }],
-                        systemInstruction: { parts: [{ text: systemPrompt }] }
+                        message: aiInput,
+                        systemPrompt: systemPrompt
                     };
 
                     const response = await fetch(endpoint, {
@@ -417,8 +386,8 @@
 
                     const data = await response.json();
                     
-                    if (!response.ok) {
-                        throw new Error(data.error?.message || `HTTP Error ${response.status}`);
+                    if (!response.ok || data.error) {
+                        throw new Error(data.error || `HTTP Error ${response.status}`);
                     }
                     
                     const aiText = data.candidates?.[0]?.content?.parts?.[0]?.text;
@@ -430,7 +399,7 @@
                     }
                 } catch (err) {
                     console.error("AI Error Details:", err);
-                    setAiError(lang === 'ar' ? `خطأ تقني: ${err.message} (تأكد من الـ VPN)` : `Error: ${err.message}`);
+                    setAiError(lang === 'ar' ? `خطأ تقني: ${err.message}` : `Error: ${err.message}`);
                 } finally {
                     setIsAiLoading(false);
                 }
@@ -459,7 +428,6 @@
             return (
                 <div className={`${t.font} transition-all duration-500 relative`}>
                     
-                    {/* Navigation */}
                     <nav className={`fixed top-0 start-0 w-full z-[100] transition-all duration-500 ${scrolled ? 'bg-gray-900/95 backdrop-blur-xl shadow-2xl border-b border-gray-700 py-3' : 'bg-transparent py-6'}`}>
                         <div className="container mx-auto px-6 flex justify-between items-center">
                             
@@ -476,7 +444,6 @@
                                 </div>
                             </div>
 
-                            {/* Desktop Menu */}
                             <div className="hidden lg:flex items-center space-x-8 rtl:space-x-reverse font-bold">
                                 <a href="#" onClick={(e) => closeMenuAndNavigate(e, '#')} className="text-gray-100 hover:text-brandYellow transition-colors drop-shadow-sm">{t.navHome}</a>
                                 <a href="#menu" onClick={(e) => closeMenuAndNavigate(e, '#menu')} className="text-gray-100 hover:text-brandYellow transition-colors drop-shadow-sm">{t.navMenu}</a>
@@ -500,7 +467,6 @@
                             </button>
                         </div>
 
-                        {/* Mobile Drawer */}
                         <div className={`lg:hidden absolute top-full left-0 w-full bg-gray-900/95 backdrop-blur-3xl shadow-2xl transition-all duration-300 overflow-hidden border-t border-gray-700 ${isMenuOpen ? 'max-h-[500px] opacity-100 py-6' : 'max-h-0 opacity-0 py-0'}`}>
                             <div className="container mx-auto px-6 flex flex-col gap-6 text-center">
                                 <a href="#" onClick={(e) => closeMenuAndNavigate(e, '#')} className="text-2xl font-black text-white hover:text-brandYellow transition-colors">{t.navHome}</a>
@@ -521,7 +487,6 @@
                         </div>
                     </nav>
 
-                    {}
                     <section id="home" ref={heroRef} className="relative w-full min-h-[100svh] flex items-center pt-24 overflow-hidden bg-gray-900">
                         <div className="absolute inset-0 z-0">
                             {heroImages.map((img, idx) => (
@@ -572,7 +537,6 @@
                         </div>
                     </section>
 
-                    {}
                     <section id="ai" className="py-24 relative bg-white">
                         <div className="container mx-auto px-6">
                             <div className="max-w-5xl mx-auto rounded-[4rem] overflow-hidden bg-darkBg relative shadow-2xl">
@@ -656,7 +620,6 @@
                         </div>
                     </section>
 
-                    {}
                     <section id="menu" className="py-24 bg-[#f4f4f4]">
                         <div className="container mx-auto px-6">
                             <div className="text-center mb-16">
@@ -739,7 +702,6 @@
                         </div>
                     </section>
 
-                    {}
                     <section id="branches" className="py-24 bg-white relative overflow-hidden">
                         <div className="container mx-auto px-6">
                             <div className="text-center mb-16">
@@ -800,7 +762,6 @@
                         </div>
                     </section>
 
-                    {}
                     <footer className="bg-[#0a0f1a] text-white pt-24 pb-12 overflow-hidden relative border-t border-white/5">
                         <div className="container mx-auto px-6 relative z-10">
                             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-12 gap-16 mb-20">
@@ -832,7 +793,6 @@
                                     </ul>
                                 </div>
                                 
-                                {/* التعديل هنا: الفوتر ورقم المطعم الضخم */}
                                 <div className="lg:col-span-4 bg-white/5 p-8 rounded-4xl border border-white/10 text-center md:text-start flex flex-col justify-center">
                                     <h4 className="text-xl font-bold mb-4 text-gray-300">{lang === 'ar' ? 'اطلب هاتفيًا الآن' : 'Order by Phone Now'}</h4>
                                     <div className="text-5xl md:text-6xl font-black text-brandYellow mb-4 tracking-widest drop-shadow-lg" dir="ltr">+963 900 000 000</div>
@@ -860,7 +820,6 @@
                         </div>
                     </footer>
 
-                    {/* Floating Mobile WhatsApp Button */}
                     <a 
                         href="https://wa.me/963900000000" 
                         target="_blank"
@@ -877,5 +836,3 @@
     </script>
 </body>
 </html>
-
-
