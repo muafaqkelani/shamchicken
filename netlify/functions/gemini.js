@@ -14,8 +14,26 @@ exports.handler = async function(event, context) {
             };
         }
 
-        // استخدام المسار القياسي المستقر لنموذج فلاش
-        const endpoint = `https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent?key=${apiKey}`;
+        // الخطوة 1: جلب قائمة النماذج المتاحة تلقائياً لمفتاحك
+        const modelsResponse = await fetch(`https://generativelanguage.googleapis.com/v1beta/models?key=${apiKey}`);
+        const modelsData = await modelsResponse.json();
+
+        if (!modelsResponse.ok || !modelsData.models) {
+            throw new Error("Failed to fetch available models from Google.");
+        }
+
+        // البحث عن أول نموذج يدعم توليد المحتوى generateContent
+        const supportedModel = modelsData.models.find(m => m.supportedGenerationMethods && m.supportedGenerationMethods.includes("generateContent"));
+
+        if (!supportedModel) {
+            throw new Error("No supported Gemini model found for this API key.");
+        }
+
+        // استخراج اسم النموذج المتاح تلقائياً (مثل models/gemini-1.5-flash)
+        const modelName = supportedModel.name;
+
+        // الخطوة 2: إرسال الطلب باستخدام النموذج المكتشف تلقائياً
+        const endpoint = `https://generativelanguage.googleapis.com/v1beta/${modelName}:generateContent?key=${apiKey}`;
 
         const payload = {
             contents: [{ parts: [{ text: requestBody.message }] }],
