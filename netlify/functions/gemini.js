@@ -14,8 +14,8 @@ exports.handler = async function(event, context) {
             };
         }
 
-        // جلب النماذج واختيار نموذج gemini-1.5-flash مباشرة لأنه الأكثر استقراراً ودعماً للمجاني
-        const endpoint = `https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent?key=${apiKey}`;
+        // الاعتماد على أحدث نموذج نصي مستقر ومعتمد (Gemini 3.7 Flash)
+        const endpoint = `https://generativelanguage.googleapis.com/v1beta/models/gemini-3.7-flash:generateContent?key=${apiKey}`;
 
         const payload = {
             contents: [{ parts: [{ text: requestBody.message }] }],
