@@ -5,14 +5,20 @@ exports.handler = async function(event, context) {
 
     try {
         const requestBody = JSON.parse(event.body);
-        const apiKey = process.env.GEMinis_API_KEY || process.env.GEMINI_API_KEY; 
-        
-        // استخدام اسم النموذج المستقر والصحيح
+        const apiKey = process.env.GEMINI_API_KEY; 
+
+        if (!apiKey) {
+            return {
+                statusCode: 500,
+                body: JSON.stringify({ error: "API key is missing in environment variables." })
+            };
+        }
+
         const endpoint = `https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent?key=${apiKey}`;
 
         const payload = {
             contents: [{ parts: [{ text: requestBody.message }] }],
-            systemInstruction: { parts: [{ text: requestBody.systemPrompt }] }
+            system_instruction: { parts: [{ text: requestBody.systemPrompt }] }
         };
 
         const response = await fetch(endpoint, {
@@ -24,7 +30,10 @@ exports.handler = async function(event, context) {
         const data = await response.json();
         
         if (!response.ok) {
-            throw new Error(data.error?.message || "API Request Failed");
+            return {
+                statusCode: response.status,
+                body: JSON.stringify({ error: data.error?.message || "Google API Error" })
+            };
         }
 
         return {
