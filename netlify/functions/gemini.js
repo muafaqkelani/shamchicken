@@ -14,7 +14,7 @@ exports.handler = async function(event, context) {
             };
         }
 
-        // جلب قائمة النماذج المتاحة من خوادم Google
+        // جلب قائمة النماذج المتاحة لمفتاحك لاكتشاف البديل النشط
         const modelsResponse = await fetch(`https://generativelanguage.googleapis.com/v1beta/models?key=${apiKey}`);
         const modelsData = await modelsResponse.json();
 
@@ -22,24 +22,21 @@ exports.handler = async function(event, context) {
             throw new Error("Failed to fetch available models from Google.");
         }
 
-        // تصفية النماذج لاختيار أحدث نموذج "flash" يدعم التوليد تلقائياً
-        const flashModels = modelsData.models.filter(m => 
+        // تصفية النماذج واستبعاد أي نموذج متوقف، والبحث عن أي نموذج فلاش متاح يدعم التوليد
+        const validModels = modelsData.models.filter(m => 
             m.name.includes("flash") && 
+            !m.name.includes("omni") && // استبعاد النموذج الذي تسبب بالمشكلة
             m.supportedGenerationMethods && 
             m.supportedGenerationMethods.includes("generateContent")
         );
 
-        if (flashModels.length === 0) {
-            throw new Error("No supported Flash model found for this API key.");
+        if (validModels.length === 0) {
+            throw new Error("No available active Flash models found for this API key.");
         }
 
-        // ترتيب النماذج تلقائياً لاختيار الأحدث (الذي يمتلك الاسم الأطول أو الإصدار الأعلى)
-        flashModels.sort((a, b) => b.name.localeCompare(a.name, undefined, { numeric: true }));
-
-        const selectedModelName = flashModels[0].name; // سيختار أحدث نموذج تلقائياً (مثل gemini-3.8-flash)
-
-        // إرسال الطلب باستخدام النموذج المكتشف تلقائياً
-        const endpoint = `https://generativelanguage.googleapis.com/v1beta/${selectedModelName}:generateContent?key=${apiKey}`;
+        // اختيار أول نموذج فلاش نشط ومتاح
+        const selectedModel = validModels[0].name;
+        const endpoint = `https://generativelanguage.googleapis.com/v1beta/${selectedModel}:generateContent?key=${apiKey}`;
 
         const payload = {
             contents: [{ parts: [{ text: requestBody.message }] }],
