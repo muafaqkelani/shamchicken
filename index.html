@@ -387,7 +387,7 @@
                     const data = await response.json();
                     
                     if (!response.ok || data.error) {
-                        throw new Error(data.error || `HTTP Error ${response.status}`);
+                        throw new Error(data.error.message || `HTTP Error ${response.status}`);
                     }
                     
                     const aiText = data.candidates?.[0]?.content?.parts?.[0]?.text;
