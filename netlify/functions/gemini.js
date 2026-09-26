@@ -14,7 +14,7 @@ exports.handler = async function(event, context) {
             };
         }
 
-        // الخطوة 1: جلب قائمة النماذج المتاحة تلقائياً لمفتاحك
+        // جلب قائمة النماذج المتاحة من خوادم Google
         const modelsResponse = await fetch(`https://generativelanguage.googleapis.com/v1beta/models?key=${apiKey}`);
         const modelsData = await modelsResponse.json();
 
@@ -22,18 +22,24 @@ exports.handler = async function(event, context) {
             throw new Error("Failed to fetch available models from Google.");
         }
 
-        // البحث عن أول نموذج يدعم توليد المحتوى generateContent
-        const supportedModel = modelsData.models.find(m => m.supportedGenerationMethods && m.supportedGenerationMethods.includes("generateContent"));
+        // تصفية النماذج لاختيار أحدث نموذج "flash" يدعم التوليد تلقائياً
+        const flashModels = modelsData.models.filter(m => 
+            m.name.includes("flash") && 
+            m.supportedGenerationMethods && 
+            m.supportedGenerationMethods.includes("generateContent")
+        );
 
-        if (!supportedModel) {
-            throw new Error("No supported Gemini model found for this API key.");
+        if (flashModels.length === 0) {
+            throw new Error("No supported Flash model found for this API key.");
         }
 
-        // استخراج اسم النموذج المتاح تلقائياً (مثل models/gemini-1.5-flash)
-        const modelName = supportedModel.name;
+        // ترتيب النماذج تلقائياً لاختيار الأحدث (الذي يمتلك الاسم الأطول أو الإصدار الأعلى)
+        flashModels.sort((a, b) => b.name.localeCompare(a.name, undefined, { numeric: true }));
 
-        // الخطوة 2: إرسال الطلب باستخدام النموذج المكتشف تلقائياً
-        const endpoint = `https://generativelanguage.googleapis.com/v1beta/${modelName}:generateContent?key=${apiKey}`;
+        const selectedModelName = flashModels[0].name; // سيختار أحدث نموذج تلقائياً (مثل gemini-3.8-flash)
+
+        // إرسال الطلب باستخدام النموذج المكتشف تلقائياً
+        const endpoint = `https://generativelanguage.googleapis.com/v1beta/${selectedModelName}:generateContent?key=${apiKey}`;
 
         const payload = {
             contents: [{ parts: [{ text: requestBody.message }] }],
