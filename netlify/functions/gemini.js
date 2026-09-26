@@ -14,21 +14,36 @@ exports.handler = async function(event, context) {
             };
         }
 
-        // الاعتماد على أحدث نموذج نصي مستقر ومعتمد (Gemini 3.7 Flash)
-        const endpoint = `https://generativelanguage.googleapis.com/v1beta/models/gemini-3.7-flash:generateContent?key=${apiKey}`;
+        // اعتماد نموذج gemini-3.5-flash-lite حصراً
+        const endpoint = `https://generativelanguage.googleapis.com/v1beta/models/gemini-3.5-flash-lite:generateContent?key=${apiKey}`;
 
         const payload = {
             contents: [{ parts: [{ text: requestBody.message }] }],
             system_instruction: { parts: [{ text: requestBody.systemPrompt }] }
         };
 
-        const response = await fetch(endpoint, {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify(payload)
-        });
+        let response;
+        let data;
+        let retries = 3; 
+        let delay = 1000;
 
-        const data = await response.json();
+        while (retries > 0) {
+            response = await fetch(endpoint, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify(payload)
+            });
+
+            data = await response.json();
+
+            if (response.ok || (response.status !== 503 && response.status !== 429)) {
+                break;
+            }
+
+            retries--;
+            await new Promise(resolve => setTimeout(resolve, delay));
+            delay *= 2;
+        }
         
         if (!response.ok) {
             return {
