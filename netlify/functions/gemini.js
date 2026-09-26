@@ -4,14 +4,12 @@ exports.handler = async function(event, context) {
     }
 
     try {
-        // استخراج البيانات المرسلة من الواجهة الأمامية
         const requestBody = JSON.parse(event.body);
+        const apiKey = process.env.GEMinis_API_KEY || process.env.GEMINI_API_KEY; 
         
-        // جلب المفتاح السري من متغيرات البيئة في إعدادات Netlify
-        const apiKey = process.env.GEMINI_API_KEY; 
-        const endpoint = `https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash-latest:generateContent?key=${apiKey}`;
+        // استخدام اسم النموذج المستقر والصحيح
+        const endpoint = `https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent?key=${apiKey}`;
 
-        // تجهيز الطلب بالهيكلية التي تطلبها Google
         const payload = {
             contents: [{ parts: [{ text: requestBody.message }] }],
             systemInstruction: { parts: [{ text: requestBody.systemPrompt }] }
@@ -25,6 +23,10 @@ exports.handler = async function(event, context) {
 
         const data = await response.json();
         
+        if (!response.ok) {
+            throw new Error(data.error?.message || "API Request Failed");
+        }
+
         return {
             statusCode: 200,
             headers: { "Content-Type": "application/json" },
@@ -33,7 +35,7 @@ exports.handler = async function(event, context) {
     } catch (error) {
         return {
             statusCode: 500,
-            body: JSON.stringify({ error: "Internal Server Error" })
+            body: JSON.stringify({ error: error.message || "Internal Server Error" })
         };
     }
 };
