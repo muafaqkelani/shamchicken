@@ -10,10 +10,11 @@ exports.handler = async function(event, context) {
         if (!apiKey) {
             return {
                 statusCode: 500,
-                body: JSON.stringify({ error: "API key is missing in environment variables." })
+                body: JSON.stringify({ error: { message: "API key is missing in environment variables." } })
             };
         }
 
+        // استخدام المسار القياسي المستقر لنموذج فلاش
         const endpoint = `https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent?key=${apiKey}`;
 
         const payload = {
@@ -32,7 +33,7 @@ exports.handler = async function(event, context) {
         if (!response.ok) {
             return {
                 statusCode: response.status,
-                body: JSON.stringify({ error: data.error?.message || "Google API Error" })
+                body: JSON.stringify({ error: { message: data.error?.message || "Google API Error" } })
             };
         }
 
@@ -44,7 +45,7 @@ exports.handler = async function(event, context) {
     } catch (error) {
         return {
             statusCode: 500,
-            body: JSON.stringify({ error: error.message || "Internal Server Error" })
+            body: JSON.stringify({ error: { message: error.message || "Internal Server Error" } })
         };
     }
 };
