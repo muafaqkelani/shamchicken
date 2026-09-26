@@ -14,36 +14,8 @@ exports.handler = async function(event, context) {
             };
         }
 
-        // جلب قائمة النماذج المتاحة من خوادم Google
-        const modelsResponse = await fetch(`https://generativelanguage.googleapis.com/v1beta/models?key=${apiKey}`);
-        const modelsData = await modelsResponse.json();
-
-        if (!modelsResponse.ok || !modelsData.models) {
-            throw new Error("Failed to fetch available models from Google.");
-        }
-
-        // تصفية النماذج: استبعاد omni و flash تماماً، والتركيز على الإصدارات الحديثة (مثل 3.x) ودعم التوليد
-        const availableModels = modelsData.models.filter(m => 
-            !m.name.toLowerCase().includes("omni") && 
-            !m.name.toLowerCase().includes("flash") && 
-            (m.name.includes("3.") || m.name.includes("gemini-pro")) &&
-            m.supportedGenerationMethods && 
-            m.supportedGenerationMethods.includes("generateContent")
-        );
-
-        // إذا لم توجد نماذج مطابقة، نقوم بالبحث عن أي نموذج أساسي نشط كخطة بديلة
-        let selectedModelName;
-        if (availableModels.length > 0) {
-            // ترتيب النماذج تنازلياً لاختيار أحدث إصدار متاح (مثل 3.8 ثم 3.5 إلخ)
-            availableModels.sort((a, b) => b.name.localeCompare(a.name, undefined, { numeric: true }));
-            selectedModelName = availableModels[0].name;
-        } else {
-            // خطة بديلة: استخدام نموذج pro القياسي المستقر
-            selectedModelName = "models/gemini-pro";
-        }
-
-        // إرسال الطلب باستخدام النموذج المكتشف والنشط
-        const endpoint = `https://generativelanguage.googleapis.com/v1beta/${selectedModelName}:generateContent?key=${apiKey}`;
+        // جلب النماذج واختيار نموذج gemini-1.5-flash مباشرة لأنه الأكثر استقراراً ودعماً للمجاني
+        const endpoint = `https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent?key=${apiKey}`;
 
         const payload = {
             contents: [{ parts: [{ text: requestBody.message }] }],
