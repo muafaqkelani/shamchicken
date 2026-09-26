@@ -14,7 +14,7 @@ exports.handler = async function(event, context) {
             };
         }
 
-        // الخطوة 1: استعراض وعرض قائمة النماذج المتاحة من خوادم Google تلقائياً
+        // جلب قائمة النماذج المتاحة من خوادم Google
         const modelsResponse = await fetch(`https://generativelanguage.googleapis.com/v1beta/models?key=${apiKey}`);
         const modelsData = await modelsResponse.json();
 
@@ -22,23 +22,27 @@ exports.handler = async function(event, context) {
             throw new Error("Failed to fetch available models from Google.");
         }
 
-        // الخطوة 2: تصفية النماذج لاختيار نماذج "flash" النشطة التي تدعم التوليد حصراً
+        // تصفية النماذج: استبعاد omni و flash تماماً، والتركيز على الإصدارات الحديثة (مثل 3.x) ودعم التوليد
         const availableModels = modelsData.models.filter(m => 
-            m.name.includes("flash") && 
+            !m.name.toLowerCase().includes("omni") && 
+            !m.name.toLowerCase().includes("flash") && 
+            (m.name.includes("3.") || m.name.includes("gemini-pro")) &&
             m.supportedGenerationMethods && 
             m.supportedGenerationMethods.includes("generateContent")
         );
 
-        if (availableModels.length === 0) {
-            throw new Error("No active Flash models found for this API key.");
+        // إذا لم توجد نماذج مطابقة، نقوم بالبحث عن أي نموذج أساسي نشط كخطة بديلة
+        let selectedModelName;
+        if (availableModels.length > 0) {
+            // ترتيب النماذج تنازلياً لاختيار أحدث إصدار متاح (مثل 3.8 ثم 3.5 إلخ)
+            availableModels.sort((a, b) => b.name.localeCompare(a.name, undefined, { numeric: true }));
+            selectedModelName = availableModels[0].name;
+        } else {
+            // خطة بديلة: استخدام نموذج pro القياسي المستقر
+            selectedModelName = "models/gemini-pro";
         }
 
-        // الخطوة 3: ترتيب النماذج تنازلياً لاختيار أحدث وأعلى إصدار متاح تلقائياً
-        availableModels.sort((a, b) => b.name.localeCompare(a.name, undefined, { numeric: true }));
-
-        const selectedModelName = availableModels[0].name; // سيختار أحدث نموذج متاح وجاهز للطلب فوراً
-
-        // الخطوة 4: إرسال الطلب باستخدام النموذج المكتشف والأحدث
+        // إرسال الطلب باستخدام النموذج المكتشف والنشط
         const endpoint = `https://generativelanguage.googleapis.com/v1beta/${selectedModelName}:generateContent?key=${apiKey}`;
 
         const payload = {
