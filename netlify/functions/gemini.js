@@ -9,7 +9,7 @@ exports.handler = async function(event, context) {
         
         // جلب المفتاح السري من متغيرات البيئة في إعدادات Netlify
         const apiKey = process.env.GEMINI_API_KEY; 
-        const endpoint = `https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent?key=${apiKey}`;
+        const endpoint = `https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash-latest:generateContent?key=${apiKey}`;
 
         // تجهيز الطلب بالهيكلية التي تطلبها Google
         const payload = {
